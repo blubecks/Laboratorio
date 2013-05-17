@@ -61,10 +61,10 @@ void heapDestroy (heap_t *h)
 
 void *heapAlloc (heap_t *h, size_t size)
 {
-	sector_t *s;
-	void*item=NULL;
-	char*p;
-	void*off;
+	sector_t *s,*item,*so;
+	item=(sector_t*)malloc(sizeof(sector_t));
+	item->dimen=size;
+	char*tmp;
 	if(h->dim<size)
 	{
 		printf("the sector is too big\n");
@@ -72,10 +72,38 @@ void *heapAlloc (heap_t *h, size_t size)
 	}
 
 	if(h->policy==first_fit)s=(sector_t*)ExtractElement(h->empty,compare_by_size,(void*)item);
-	if(h->policy==best_fit) s=(sector_t*)ExtractElement(h->empty,compare_by_size,(void*)size);
-	if(h->policy==wors_fit)
+	if(h->policy==best_fit) s=(sector_t*)ExtractMINElement(h->empty,compare_by_size,(void*)item);
+	if(h->policy==wors_fit)s=(sector_t*)ExtractMAXElement(h->empty,compare_by_size,(void*)item);
 
+	so=s;
+	s->dimen-=size;
+	if(s->dimen!=0)	h->empty=OrderInsert(h->empty,(void*)s,compare_by_offset);//reinserisco avanzo
+	so->offset=(int)h->base;
+	so->offset=size;
+	h->full=OrderInsert(h->full,(void*)so,compare_by_offset);
+	tmp=(char*)h->base;
+	tmp+=size;
+	h->base=(void*)tmp;
+	return(void*)(so->offset);
     return h->base;
+}
+
+void heapFree (heap_t *h, void *p)
+{
+	sector_t*so,*item;
+	sector_t*prev,*prox;
+	item=(sector_t*)malloc(sizeof(sector_t));
+	item->offset=(int)p;
+	so=ExtractEqual(h->full,compare_by_offset,(void*)item);
+	if(so==NULL) exit(-1);
+	h->empty=OrderInsert(h->full,(void*)so,compare_by_offset);
+	/*
+	 * ora devo controllare che non ci siano partizioni libere contigue, nel caso ci fossero le devo fondere
+	 */
+
+
+
+	return;
 }
 
 void heapSetPolicy (heap_t *h, heap_policy_t policy)
